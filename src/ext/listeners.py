@@ -45,54 +45,53 @@ class Listeners(commands.Cog):
             await interaction.response.send_modal(modal=start_gos(self.bot, interaction, "Следящего за мафией"))
 
         if str(interaction.data.custom_id.split("|")[0]) == "zauavka_yes":
-    # Определяем роли по их ID
-    role_ids = {
-        "ROLE_1": 1332438630861508661,
-        "ROLE_2": 1332438630861508660,
-        "ROLE_3": 1332438630861508658,
-        "ROLE_4": 1332438630861508660
-    }
+        role_ids = {
+            "ROLE_1": 1332438630861508661,
+            "ROLE_2": 1332438630861508660,
+            "ROLE_3": 1332438630861508658,
+            "ROLE_4": 1332438630861508660
+        }
 
-    # Получаем объекты ролей
-    roles = {name: interaction.guild.get_role(role_id) for name, role_id in role_ids.items()}
+        # Получаем объекты ролей
+        roles = {name: interaction.guild.get_role(role_id) for name, role_id in role_ids.items()}
 
-    # Проверяем, что все роли существуют
-    if None in roles.values():
-        missing_roles = [name for name, role in roles.items() if role is None]
-        await interaction.response.send_message(
-            content=f"Ошибка: Роли с ID {', '.join(str(role_ids[name]) for name in missing_roles)} не найдены.",
-            ephemeral=True
-        )
-        return
-
-    # Проверяем, имеет ли пользователь хотя бы одну из указанных ролей
-    user_roles = [roles["ROLE_1"], roles["ROLE_2"], roles["ROLE_3"], roles["ROLE_4"]]
-    if any(role in interaction.author.roles for role in user_roles):
-        # Создаем новое представление с кнопкой
-        view_o = PickOne(222)
-        view_o.add_item(
-            disnake.ui.Button(
-                style=disnake.ButtonStyle.green,
-                label=f"Рассмотрел - {interaction.author.name} | Итог - Одобрен.",
-                custom_id=f"qq",
-                disabled=True
-            )
-        )
-
-        # Обновляем сообщение и отправляем ответ
-        try:
-            await interaction.message.edit(view=view_o)
-            await interaction.response.send_message(content="Решение вынесено.", ephemeral=True)
-        except Exception as e:
+        # Проверяем, что все роли существуют
+        if None in roles.values():
+            missing_roles = [name for name, role in roles.items() if role is None]
             await interaction.response.send_message(
-                content=f"Произошла ошибка при обновлении сообщения: {str(e)}",
+                content=f"Ошибка: Роли с ID {', '.join(str(role_ids[name]) for name in missing_roles)} не найдены.",
                 ephemeral=True
             )
-    else:
-        # Если у пользователя нет необходимых ролей
-        await interaction.response.send_message(
-            content="У вас недостаточно прав для выполнения этого действия.",
-            ephemeral=True
+            return
+
+        # Проверяем, имеет ли пользователь хотя бы одну из указанных ролей
+        user_roles = [roles["ROLE_1"], roles["ROLE_2"], roles["ROLE_3"], roles["ROLE_4"]]
+        if any(role in interaction.author.roles for role in user_roles):
+            # Создаем новое представление с кнопкой
+            view_o = PickOne(222)
+            view_o.add_item(
+                disnake.ui.Button(
+                    style=disnake.ButtonStyle.green,
+                    label=f"Рассмотрел - {interaction.author.name} | Итог - Одобрен.",
+                    custom_id=f"qq",
+                    disabled=True
+                )
+            )
+
+            # Обновляем сообщение и отправляем ответ
+            try:
+                await interaction.message.edit(view=view_o)
+                await interaction.response.send_message(content="Решение вынесено.", ephemeral=True)
+            except Exception as e:
+                await interaction.response.send_message(
+                    content=f"Произошла ошибка при обновлении сообщения: {str(e)}",
+                    ephemeral=True
+                )
+        else:
+            # Если у пользователя нет необходимых ролей
+            await interaction.response.send_message(
+                content="У вас недостаточно прав для выполнения этого действия.",
+                ephemeral=True
         )
 
         if str(interaction.data.custom_id.split("|")[0]) == "zauavka_no":
@@ -239,35 +238,99 @@ class Listeners(commands.Cog):
                     await interaction.response.send_message(content="Решение успешно вынесено.", ephemeral=True)
 
         if str(interaction.data.custom_id.split("|")[0]) == "fj_up_no":
-            uid = interaction.data.custom_id.split("|")[1]
-            member = interaction.guild.get_member(int(uid))
-            if not member:
-                    member = self.bot.get_user(int(uid)) 
+        try:
+            action, uid, _, role_name = interaction.data.custom_id.split("|")
+            uid = int(uid)
+            role_name = role_name.strip()
+            member = interaction.guild.get_member(uid) or self.bot.get_user(uid)
 
-            # print(interaction.message.id)
-            db = await self.bot.db.select(
-                "*", 
-                "member_up", 
-                where={
-                    "message_id": interaction.message.id
-                    }
+            if not member:
+                await interaction.response.send_message(
+                    content="Ошибка: Пользователь не найден.",
+                    ephemeral=True
                 )
-            if db: 
-                ROLE_1 = interaction.guild.get_role(1332438630861508661)
-                ROLE_2 = interaction.guild.get_role(1332438630861508660)
-                if ROLE_1 in interaction.author.roles or ROLE_2 in interaction.author.roles:
-                    embed = disnake.Embed(color=0x8B0000)
-                    content = "<@&1332438630861508661>, <@&1332438630861508660>"
-                    embed.description = f"""
-                    • Discord - {member.mention} отказано в повышение до `{interaction.data.custom_id.split("|")[3]}`
-                    **• Рассмотрел:** - {interaction.author.mention}
-                    """
-                    channel = interaction.guild.get_channel(1332438632442888338)
-                    await channel.send(embed=embed, content=content)
-     
-                    msg = await interaction.channel.fetch_message(db['message_id'])
-                    await msg.edit(view=None)
-                    await interaction.response.send_message(content="Решение успешно вынесено.", ephemeral=True)
+                return
+
+            db = await self.bot.db.select(
+                "*",
+                "member_up",
+                where={"message_id": interaction.message.id}
+            )
+
+            if not db:
+                await interaction.response.send_message(
+                    content="Ошибка: Запись в базе данных не найдена.",
+                    ephemeral=True
+                )
+                return
+
+            role_ids = {
+                "ROLE_1": 1332438630861508661,
+                "ROLE_2": 1332438630861508660
+            }
+            channel_id = 1332438632442888338
+
+            roles = {name: interaction.guild.get_role(role_id) for name, role_id in role_ids.items()}
+
+            if None in roles.values():
+                missing_roles = [name for name, role in roles.items() if role is None]
+                await interaction.response.send_message(
+                    content=f"Ошибка: Роли с ID {', '.join(str(role_ids[name]) for name in missing_roles)} не найдены.",
+                    ephemeral=True
+                )
+                return
+
+            required_roles = [roles["ROLE_1"], roles["ROLE_2"]]
+            if not any(role in interaction.author.roles for role in required_roles):
+                await interaction.response.send_message(
+                    content="У вас недостаточно прав для выполнения этого действия.",
+                    ephemeral=True
+                )
+                return
+
+            embed = disnake.Embed(color=0x8B0000)
+            embed.description = (
+                f"• Discord - {member.mention} отказано в повышении до `{role_name}`\n"
+                f"**• Рассмотрел:** {interaction.author.mention}"
+            )
+
+            channel = interaction.guild.get_channel(channel_id)
+
+            if not channel:
+                await interaction.response.send_message(
+                    content="Ошибка: Канал для отправки сообщения не найден.",
+                    ephemeral=True
+                )
+                return
+
+            content = "<@&1332438630861508661>, <@&1332438630861508660>"
+            try:
+                await channel.send(content=content, embed=embed)
+            except Exception as e:
+                await interaction.response.send_message(
+                    content=f"Произошла ошибка при отправке сообщения: {str(e)}",
+                    ephemeral=True
+                )
+                return
+
+            try:
+                msg = await interaction.channel.fetch_message(db['message_id'])
+                await msg.edit(view=None)
+            except Exception as e:
+                await interaction.response.send_message(
+                    content=f"Произошла ошибка при редактировании сообщения: {str(e)}",
+                    ephemeral=True
+                )
+                return
+
+            await interaction.response.send_message(content="Решение успешно вынесено.", ephemeral=True)
+
+        except ValueError:
+            await interaction.response.send_message(
+                content="Ошибка: Неверный формат `custom_id`.",
+                ephemeral=True
+            )
+            return
                     
           
 def setup(bot):
