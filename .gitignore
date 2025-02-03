@@ -1,11 +1,11 @@
 # Игнорируем файлы конфигурации с токенами
 config.json
 .env
-
+postgres.json
 
 # Игнорирование папки db
 /db/
-
+/src/db/
 # Игнорирование папок __pycache__
 __pycache__/
 *.pyc
